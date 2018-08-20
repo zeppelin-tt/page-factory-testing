@@ -1,0 +1,26 @@
+<Actions>
+	<Action>
+		<name>Создать счет</name>
+		<reduction>create</reduction>
+	</Action>
+	<Action>
+		<name>Закрыть счет</name>
+		<reduction>close</reduction>
+	</Action>
+	<Action>
+		<name>Заблокировать счет</name>
+		<reduction>block</reduction>
+	</Action>
+	<Action>
+		<name>Снять деньги</name>
+		<reduction>transfer_minus</reduction>
+	</Action>
+	<Action>
+		<name>Пополнить счет</name>
+		<reduction>transfer_plus</reduction>
+	</Action>
+	<Action>
+		<name>Перечислить клиенту</name>
+		<reduction>transfer_to</reduction>
+	</Action>
+</Actions>

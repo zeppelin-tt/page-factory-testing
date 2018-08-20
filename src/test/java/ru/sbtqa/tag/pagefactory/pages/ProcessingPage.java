@@ -1,5 +1,6 @@
 package ru.sbtqa.tag.pagefactory.pages;
 
+import cucumber.api.java.ru.Когда;
 import org.junit.Assert;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -9,9 +10,13 @@ import ru.sbtqa.tag.pagefactory.annotations.ActionTitle;
 import ru.sbtqa.tag.pagefactory.annotations.ElementTitle;
 import ru.sbtqa.tag.pagefactory.annotations.PageEntry;
 import ru.sbtqa.tag.pagefactory.exceptions.PageException;
+import ru.sbtqa.tag.pagefactory.generators.gens.GenerateName;
+import ru.sbtqa.tag.pagefactory.generators.gens.GenerateSecondname;
+import ru.sbtqa.tag.pagefactory.generators.gens.GenerateSurname;
 import ru.yandex.qatools.htmlelements.loader.decorator.HtmlElementDecorator;
 import ru.yandex.qatools.htmlelements.loader.decorator.HtmlElementLocatorFactory;
 
+import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -89,11 +94,27 @@ public class ProcessingPage extends AnyPage {
         this.getElementByTitle(element).click();
     }
 
+    @ActionTitle("открывает новый счет")
+    public void createAccount() {
+        select(selectActionType, "Создать счет");
+        fillField(lastname, new GenerateSurname().generate());
+        fillField(firstname, new GenerateName().generate());
+        fillField(secondname, new GenerateSecondname().generate());
+        successBtn.click();
+    }
+
     @ActionTitle("получает грид")
     public void click() {
         Map<String, List<String>> mapGrid = gridBuilder();
         LOG.info(String.valueOf(mapGrid));
     }
+
+    @ActionTitle("проверяет значение типа операции")
+    public void checkSelectValues(String targetValue) throws PageException {
+        String actualValue = selectActionType.getAttribute("value");
+        Assert.assertTrue("Значение ".concat(actualValue).concat(" != ").concat(targetValue), targetValue.equals(actualValue));
+    }
+
 
     public static Map<String, List<String>> gridBuilder() {
         List<String> listColumnNames = getElementsByXPath("//table[@class='table table-bordered']/thead/tr/th")
@@ -101,7 +122,7 @@ public class ProcessingPage extends AnyPage {
         List<String> listColumnFields;
         Map<String, List<String>> mapGrid = new HashMap<>();
         for (int i = 0; i < listColumnNames.size(); i++) {
-            listColumnFields = getElementsByXPath(String.format("//table[@class='table table-bordered']/tbody/tr/td[%s]", i+1))
+            listColumnFields = getElementsByXPath(String.format("//table[@class='table table-bordered']/tbody/tr/td[%s]", i + 1))
                     .stream().map(WebElement::getText).collect(Collectors.toList());
             mapGrid.put(listColumnNames.get(i), listColumnFields);
         }

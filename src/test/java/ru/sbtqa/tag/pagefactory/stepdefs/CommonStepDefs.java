@@ -4,6 +4,7 @@ import cucumber.api.DataTable;
 import cucumber.api.java.ru.Когда;
 import gherkin.pickles.PickleRow;
 import org.junit.Assert;
+import org.openqa.selenium.WebElement;
 import ru.sbtqa.tag.pagefactory.PageFactory;
 import ru.sbtqa.tag.pagefactory.exceptions.PageException;
 import ru.sbtqa.tag.pagefactory.utils.UIHelper;
@@ -19,4 +20,6 @@ public class CommonStepDefs {
         boolean isRows = expList.containsAll(list) && expList.removeAll(list);
         Assert.assertTrue("Список " + list.toString() + " не соответствует передаваемому списку " + expList.toString(), isRows);
     }
+
+
 }
