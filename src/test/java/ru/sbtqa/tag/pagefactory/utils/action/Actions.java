@@ -10,7 +10,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.io.File;
+import java.io.InputStream;
 import java.util.List;
 
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -29,7 +29,7 @@ public class Actions {
     private static void init() {
         if (instance == null) {
             Parser parser = new JaxbParser();
-            File file = new File(XML_ACTIONS_PATH);
+            InputStream file = Actions.class.getClassLoader().getResourceAsStream(XML_ACTIONS_PATH);
             try {
                 instance = (Actions) parser.getObject(file, Actions.class);
             } catch (JAXBException e) {

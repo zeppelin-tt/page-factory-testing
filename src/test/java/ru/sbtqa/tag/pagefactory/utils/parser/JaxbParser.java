@@ -5,6 +5,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.bind.Unmarshaller;
 import java.io.File;
+import java.io.InputStream;
 import java.io.StringReader;
 
 public class JaxbParser implements Parser {
@@ -12,8 +13,7 @@ public class JaxbParser implements Parser {
     public Object getObject(File file, Class c) throws JAXBException {
         JAXBContext context = JAXBContext.newInstance(c);
         Unmarshaller unmarshaller = context.createUnmarshaller();
-        Object object = unmarshaller.unmarshal(file);
-        return object;
+        return unmarshaller.unmarshal(file);
     }
 
     @Override
@@ -21,8 +21,14 @@ public class JaxbParser implements Parser {
         JAXBContext context = JAXBContext.newInstance(c);
         Unmarshaller unmarshaller = context.createUnmarshaller();
         StringReader reader = new StringReader(xmlStr);
-        Object object = unmarshaller.unmarshal(reader);
-        return object;
+        return unmarshaller.unmarshal(reader);
+    }
+
+    @Override
+    public Object getObject(InputStream stream, Class c) throws JAXBException {
+        JAXBContext context = JAXBContext.newInstance(c);
+        Unmarshaller unmarshaller = context.createUnmarshaller();
+        return unmarshaller.unmarshal(stream);
     }
 
     @Override

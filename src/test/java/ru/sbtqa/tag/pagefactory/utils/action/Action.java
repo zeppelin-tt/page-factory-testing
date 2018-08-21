@@ -20,6 +20,8 @@ public class Action {
         this.name = name;
         this.reduction = reduction;
     }
+    public Action() {
+    }
 
     public String getName() {
         return name;
@@ -35,7 +37,8 @@ public class Action {
         StringBuilder sb = new StringBuilder();
         return sb.append("{")
                 .append(name).append(", ")
-                .append(reduction).append(", ")
+                .append(reduction)
+                .append("}")
                 .toString();
     }
 
@@ -50,7 +53,6 @@ public class Action {
 
     @Override
     public int hashCode() {
-
         return Objects.hash(name, reduction);
     }
 }

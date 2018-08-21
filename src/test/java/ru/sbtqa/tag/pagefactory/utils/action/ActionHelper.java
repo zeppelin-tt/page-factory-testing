@@ -21,4 +21,9 @@ public class ActionHelper {
     public static String getReductionByName(String name) {
         return getActionByName(name).getReduction();
     }
+
+    public static String getNameByReduction(String reduction) {
+        return getActionByReduction(reduction).getName();
+    }
+
 }

@@ -1,6 +1,5 @@
 package ru.sbtqa.tag.pagefactory.pages;
 
-import cucumber.api.java.ru.Когда;
 import org.junit.Assert;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -16,11 +15,12 @@ import ru.sbtqa.tag.pagefactory.generators.gens.GenerateSurname;
 import ru.yandex.qatools.htmlelements.loader.decorator.HtmlElementDecorator;
 import ru.yandex.qatools.htmlelements.loader.decorator.HtmlElementLocatorFactory;
 
-import java.text.ParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import static ru.sbtqa.tag.pagefactory.utils.action.ActionHelper.getNameByReduction;
 
 @PageEntry(title = "Главная страница процессинга")
 public class ProcessingPage extends AnyPage {
@@ -67,6 +67,14 @@ public class ProcessingPage extends AnyPage {
     @ElementTitle(value = "Открыть таблицу")
     protected WebElement openTable;
 
+    @FindBy(xpath = "//button[contains(text(),'Показать закрытые')]")
+    @ElementTitle(value = "Показать закрытые")
+    protected WebElement openClosed;
+
+    @FindBy(xpath = "//button[contains(text(),'Показать все')]")
+    @ElementTitle(value = "Показать все")
+    protected WebElement openAll;
+
     @FindBy(xpath = "//table[@class='table table-bordered']")
     @ElementTitle(value = "Таблица")
     protected WebElement table;
@@ -110,9 +118,10 @@ public class ProcessingPage extends AnyPage {
     }
 
     @ActionTitle("проверяет значение типа операции")
-    public void checkSelectValues(String targetValue) throws PageException {
-        String actualValue = selectActionType.getAttribute("value");
-        Assert.assertTrue("Значение ".concat(actualValue).concat(" != ").concat(targetValue), targetValue.equals(actualValue));
+    public void checkSelectValues(String targetValue) {
+        String actualReduction = selectActionType.getAttribute("value");
+        String actualNameByReduction = getNameByReduction(actualReduction);
+        Assert.assertTrue("Значение ".concat(actualReduction).concat(" != ").concat(targetValue), targetValue.equals(actualNameByReduction));
     }
 
 
