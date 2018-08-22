@@ -50,7 +50,6 @@ public class CommonStepDefs {
         } catch (NoSuchElementException nse) {
             isPresent = false;
         }
-
         if ("наличие".equals(strategy)) {
             Assert.assertTrue("Элемент: ".concat(eTitle).concat(" отсутствует на странице: ").concat(currentPage.getTitle()), isPresent);
         } else {

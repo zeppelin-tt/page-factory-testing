@@ -4,6 +4,7 @@ import org.junit.Assert;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.slf4j.LoggerFactory;
+import ru.sbtqa.tag.datajack.Stash;
 import ru.sbtqa.tag.pagefactory.PageFactory;
 import ru.sbtqa.tag.pagefactory.annotations.ActionTitle;
 import ru.sbtqa.tag.pagefactory.annotations.ElementTitle;
@@ -20,6 +21,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import static ru.sbtqa.tag.pagefactory.utils.StashKeys.*;
+import static ru.sbtqa.tag.pagefactory.utils.ValidateHelper.validateAccNum;
+import static ru.sbtqa.tag.pagefactory.utils.ValidateHelper.validateGridField;
 import static ru.sbtqa.tag.pagefactory.utils.action.ActionHelper.getNameByReduction;
 
 @PageEntry(title = "Главная страница процессинга")
@@ -105,10 +109,18 @@ public class ProcessingPage extends AnyPage {
     @ActionTitle("открывает новый счет")
     public void createAccount() {
         select(selectActionType, "Создать счет");
-        fillField(lastname, new GenerateSurname().generate());
-        fillField(firstname, new GenerateName().generate());
-        fillField(secondname, new GenerateSecondname().generate());
+        String lastNameStr = new GenerateSurname().generate();
+        String firstNameStr = new GenerateName().generate();
+        String secondNameStr = new GenerateSecondname().generate();
+        fillField(lastname, lastNameStr);
+        fillField(firstname, firstNameStr);
+        fillField(secondname, secondNameStr);
+        Stash.put(LAST_NAME, lastNameStr);
+        Stash.put(FIRST_NAME, firstNameStr);
+        Stash.put(SECOND_NAME, secondNameStr);
         successBtn.click();
+        LOG.info("Создан пользователь: ".concat(lastNameStr).concat(" ").concat(firstNameStr).concat(" ").concat(secondNameStr));
+        System.out.println("qwe");
     }
 
     @ActionTitle("получает грид")
@@ -124,8 +136,57 @@ public class ProcessingPage extends AnyPage {
         Assert.assertTrue("Значение ".concat(actualReduction).concat(" != ").concat(targetValue), targetValue.equals(actualNameByReduction));
     }
 
+    @ActionTitle("проверяет корректность значений первой страницы таблицы")
+    public void checkGridValues() {
+        Map<String, List<String>> grid = gridBuilder();
+        validateGrid(grid);
+        Stash.put(GRID, grid);
+    }
 
-    public static Map<String, List<String>> gridBuilder() {
+    @ActionTitle("сохраняет в стэш актуальную таблицу")
+    public void saveGridIntoStash(String targetValue) {
+        Stash.put(GRID, gridBuilder());
+    }
+
+    @ActionTitle("проверяет добавление новой строки в таблицу")
+    public void checkGridAfterAddingAcc() {
+        Map<String, List<String>> lastGrid = Stash.getValue(GRID);
+        String initials = ((String) Stash.getValue(LAST_NAME))
+                .concat(" ").concat(Stash.getValue(FIRST_NAME))
+                .concat(" ").concat(Stash.getValue(SECOND_NAME));
+        Map<String, List<String>> actualGrid = gridBuilder();
+        Map<String, String> addingRow = actualGrid.entrySet().stream()
+                .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().get(0)));
+        Assert.assertTrue("Поле ФИО некорректно добавилось: ".concat(initials).concat(" != ").concat(addingRow.get("ФИО")),
+                addingRow.get("ФИО").equals(initials));
+        Assert.assertTrue("Предыдущее поле не находится на второй позиции: ".concat(actualGrid.get("ФИО").get(1)).concat(" != ").concat(lastGrid.get("ФИО").get(0)),
+                actualGrid.get("ФИО").get(1).equals(lastGrid.get("ФИО").get(0)));
+        Stash.put(ADDING_ROW, addingRow);
+    }
+
+    @ActionTitle("проверяет корректность добавления поля")
+    public void checkNewAccRow(String columnName) {
+        Map<String, String> rowMap = Stash.getValue(ADDING_ROW);
+        Assert.assertTrue("В добавленном аккаунте некорректено поле: ".concat(columnName), validateAccNum(rowMap.get(columnName)));
+    }
+
+    @ActionTitle("проверяет проверяет значение поля")
+    public void checkNewAccValue(String columnName, String expectedResult) {
+        Map<String, String> rowMap = Stash.getValue(ADDING_ROW);
+        String actualValue = rowMap.get(columnName);
+        Assert.assertTrue("В добавленном аккаунте некорректно поле: "
+                        .concat(columnName).concat(" ( ").concat(actualValue)
+                        .concat(" != ").concat(expectedResult),
+                expectedResult.equals(actualValue));
+    }
+
+    private void validateGrid(Map<String, List<String>> grid) {
+        grid.forEach((key, value) -> value
+                .forEach(e -> Assert.assertTrue("Некоррекнтно поле: ".concat(key).concat(" != ").concat(e), validateGridField(e, key)))
+        );
+    }
+
+    private static Map<String, List<String>> gridBuilder() {
         List<String> listColumnNames = getElementsByXPath("//table[@class='table table-bordered']/thead/tr/th")
                 .stream().map(WebElement::getText).collect(Collectors.toList());
         List<String> listColumnFields;
