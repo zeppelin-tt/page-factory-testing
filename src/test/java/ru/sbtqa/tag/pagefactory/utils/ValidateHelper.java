@@ -37,7 +37,7 @@ public class ValidateHelper {
     }
 
     private static boolean validateInitials(String accNum) {
-        return compliesRegEx(accNum, "[A-ZА-Я][а-яa-z-]+\\s[A-ZА-Я][а-яa-z]+\\s[A-ZА-Я][а-яa-z-]+(\\s[A-ZА-Я][а-яa-z-]+)?");
+        return compliesRegEx(accNum, "[A-ZА-Я][ёа-яa-z-]+\\s[A-ZА-Я][ёа-яa-z]+\\s[A-ZА-Я][ёа-яa-z-]+(\\s[A-ZА-Я][ёа-яa-z-]+)?");
     }
 
     private static boolean validateBalance(String accNum) {

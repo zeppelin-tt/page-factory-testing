@@ -13,15 +13,19 @@ import ru.sbtqa.tag.pagefactory.exceptions.PageException;
 import ru.sbtqa.tag.pagefactory.generators.gens.GenerateName;
 import ru.sbtqa.tag.pagefactory.generators.gens.GenerateSecondname;
 import ru.sbtqa.tag.pagefactory.generators.gens.GenerateSurname;
+import ru.sbtqa.tag.pagefactory.utils.Storage;
 import ru.yandex.qatools.htmlelements.loader.decorator.HtmlElementDecorator;
 import ru.yandex.qatools.htmlelements.loader.decorator.HtmlElementLocatorFactory;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static ru.sbtqa.tag.pagefactory.utils.StashKeys.*;
+import static ru.sbtqa.tag.pagefactory.utils.Storage.Constants.TIME_FORMAT;
+import static ru.sbtqa.tag.pagefactory.utils.Storage.StashKeys.*;
 import static ru.sbtqa.tag.pagefactory.utils.ValidateHelper.validateAccNum;
 import static ru.sbtqa.tag.pagefactory.utils.ValidateHelper.validateGridField;
 import static ru.sbtqa.tag.pagefactory.utils.action.ActionHelper.getNameByReduction;
@@ -157,10 +161,11 @@ public class ProcessingPage extends AnyPage {
         Map<String, List<String>> actualGrid = gridBuilder();
         Map<String, String> addingRow = actualGrid.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().get(0)));
-        Assert.assertTrue("Поле ФИО некорректно добавилось: ".concat(initials).concat(" != ").concat(addingRow.get("ФИО")),
-                addingRow.get("ФИО").equals(initials));
-        Assert.assertTrue("Предыдущее поле не находится на второй позиции: ".concat(actualGrid.get("ФИО").get(1)).concat(" != ").concat(lastGrid.get("ФИО").get(0)),
-                actualGrid.get("ФИО").get(1).equals(lastGrid.get("ФИО").get(0)));
+        Assert.assertTrue("Поле ФИО некорректно добавилось: ".concat(initials).concat(" != ").concat(addingRow.get(Storage.Columns.INITIALS)),
+                addingRow.get(Storage.Columns.INITIALS).equals(initials));
+        Assert.assertTrue("Предыдущее поле не находится на второй позиции: ".concat(actualGrid.get(Storage.Columns.INITIALS).get(1))
+                        .concat(" != ").concat(lastGrid.get(Storage.Columns.INITIALS).get(0)),
+                actualGrid.get(Storage.Columns.INITIALS).get(1).equals(lastGrid.get(Storage.Columns.INITIALS).get(0)));
         Stash.put(ADDING_ROW, addingRow);
     }
 
@@ -178,6 +183,33 @@ public class ProcessingPage extends AnyPage {
                         .concat(columnName).concat(" ( ").concat(actualValue)
                         .concat(" != ").concat(expectedResult),
                 expectedResult.equals(actualValue));
+    }
+
+    @ActionTitle("проверяет равенство времени создания и последней операции")
+    public void checkNewTimes() {
+        Map<String, String> rowMap = Stash.getValue(ADDING_ROW);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(TIME_FORMAT);
+        LocalDateTime lastOpTime =  LocalDateTime.parse(rowMap.get("Время последней операции"), formatter);
+        LocalDateTime createTime =  LocalDateTime.parse(rowMap.get("Время создания счёта"), formatter);
+        LocalDateTime timeNow = LocalDateTime.now();
+        Assert.assertTrue("Время операций создания и последней операции не равны.", lastOpTime.equals(createTime));
+        Assert.assertTrue("Расхождение актуального Времени (".concat(timeNow.toString()).concat(" и Времени создания (").concat(createTime.toString()).concat(")"),
+                timeNow.isAfter(createTime.minusMinutes(3)) && timeNow.isAfter(createTime));
+    }
+
+    @ActionTitle("проверяет пополнение счета")
+    public void checkRefill() {
+        Map<String, String> rowMap = Stash.getValue(ADDING_ROW);
+        String sum = "555.55";
+        select(selectActionType, "Пополнить счет");
+        fillField(accnum, rowMap.get(Storage.Columns.ACC_NUM));
+        fillField(resources, sum);
+        successBtn.click();
+        Map<String, List<String>> actualGrid = gridBuilder();
+        String actualBalance = actualGrid.get(Storage.Columns.BALANCE).get(0);
+        Assert.assertTrue("Баланс не соответствует добавленному: ".concat(sum).concat(" != ").concat(actualBalance), sum.equals(actualBalance));
+        String actualLastAction = actualGrid.get(Storage.Columns.LAST_ACTION).get(0);
+        Assert.assertTrue("Последняя операция некорректна: ".concat(actualLastAction), Storage.Actions.REFILL.equals(actualLastAction));
     }
 
     private void validateGrid(Map<String, List<String>> grid) {
