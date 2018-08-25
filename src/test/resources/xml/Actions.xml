@@ -1,14 +1,14 @@
 <Actions>
 	<Action>
-		<name>Создать счет</name>
+		<name>Создать счёт</name>
 		<reduction>create</reduction>
 	</Action>
 	<Action>
-		<name>Закрыть счет</name>
+		<name>Закрыть счёт</name>
 		<reduction>close</reduction>
 	</Action>
 	<Action>
-		<name>Заблокировать счет</name>
+		<name>Заблокировать счёт</name>
 		<reduction>block</reduction>
 	</Action>
 	<Action>
@@ -16,7 +16,7 @@
 		<reduction>transfer_minus</reduction>
 	</Action>
 	<Action>
-		<name>Пополнить счет</name>
+		<name>Пополнить счёт</name>
 		<reduction>transfer_plus</reduction>
 	</Action>
 	<Action>

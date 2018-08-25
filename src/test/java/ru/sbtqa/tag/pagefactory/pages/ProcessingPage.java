@@ -11,12 +11,14 @@ import ru.sbtqa.tag.pagefactory.annotations.ElementTitle;
 import ru.sbtqa.tag.pagefactory.annotations.PageEntry;
 import ru.sbtqa.tag.pagefactory.exceptions.PageException;
 import ru.sbtqa.tag.pagefactory.generators.gens.GenerateName;
+import ru.sbtqa.tag.pagefactory.generators.gens.GenerateNumeric;
 import ru.sbtqa.tag.pagefactory.generators.gens.GenerateSecondname;
 import ru.sbtqa.tag.pagefactory.generators.gens.GenerateSurname;
 import ru.sbtqa.tag.pagefactory.utils.Storage;
 import ru.yandex.qatools.htmlelements.loader.decorator.HtmlElementDecorator;
 import ru.yandex.qatools.htmlelements.loader.decorator.HtmlElementLocatorFactory;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -24,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static ru.sbtqa.tag.pagefactory.utils.Storage.Constants.TIME_FORMAT;
 import static ru.sbtqa.tag.pagefactory.utils.Storage.StashKeys.*;
 import static ru.sbtqa.tag.pagefactory.utils.ValidateHelper.validateAccNum;
 import static ru.sbtqa.tag.pagefactory.utils.ValidateHelper.validateGridField;
@@ -52,7 +53,7 @@ public class ProcessingPage extends AnyPage {
     protected WebElement secondname;
 
     @FindBy(xpath = "//input[@name='accnum']")
-    @ElementTitle(value = "Номер счета")
+    @ElementTitle(value = "Номер счёта")
     protected WebElement accnum;
 
     @FindBy(xpath = "//input[@name='resources']")
@@ -60,7 +61,7 @@ public class ProcessingPage extends AnyPage {
     protected WebElement resources;
 
     @FindBy(xpath = "//input[@name='second_accnum']")
-    @ElementTitle(value = "Номер счета получателя")
+    @ElementTitle(value = "Номер счёта получателя")
     protected WebElement secondAccnum;
 
     @FindBy(xpath = "//button[@class='btn btn-primary']")
@@ -110,9 +111,9 @@ public class ProcessingPage extends AnyPage {
         this.getElementByTitle(element).click();
     }
 
-    @ActionTitle("открывает новый счет")
+    @ActionTitle("открывает новый счёт")
     public void createAccount() {
-        select(selectActionType, "Создать счет");
+        select(selectActionType, Storage.ActionsInfinitive.CREATE_FULL);
         String lastNameStr = new GenerateSurname().generate();
         String firstNameStr = new GenerateName().generate();
         String secondNameStr = new GenerateSecondname().generate();
@@ -124,7 +125,6 @@ public class ProcessingPage extends AnyPage {
         Stash.put(SECOND_NAME, secondNameStr);
         successBtn.click();
         LOG.info("Создан пользователь: ".concat(lastNameStr).concat(" ").concat(firstNameStr).concat(" ").concat(secondNameStr));
-        System.out.println("qwe");
     }
 
     @ActionTitle("получает грид")
@@ -188,7 +188,7 @@ public class ProcessingPage extends AnyPage {
     @ActionTitle("проверяет равенство времени создания и последней операции")
     public void checkNewTimes() {
         Map<String, String> rowMap = Stash.getValue(ADDING_ROW);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(TIME_FORMAT);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Storage.Constants.TIME_FORMAT);
         LocalDateTime lastOpTime =  LocalDateTime.parse(rowMap.get("Время последней операции"), formatter);
         LocalDateTime createTime =  LocalDateTime.parse(rowMap.get("Время создания счёта"), formatter);
         LocalDateTime timeNow = LocalDateTime.now();
@@ -197,19 +197,34 @@ public class ProcessingPage extends AnyPage {
                 timeNow.isAfter(createTime.minusMinutes(3)) && timeNow.isAfter(createTime));
     }
 
-    @ActionTitle("проверяет пополнение счета")
+    @ActionTitle("проверяет пополнение счёта")
     public void checkRefill() {
         Map<String, String> rowMap = Stash.getValue(ADDING_ROW);
-        String sum = "555.55";
-        select(selectActionType, "Пополнить счет");
+        BigDecimal sum = new BigDecimal(new GenerateNumeric().generate("3").concat(".").concat(new GenerateNumeric().generate("2")));
+        select(selectActionType, Storage.ActionsInfinitive.REFILL_FULL);
         fillField(accnum, rowMap.get(Storage.Columns.ACC_NUM));
-        fillField(resources, sum);
+        fillField(resources, sum.toString());
         successBtn.click();
         Map<String, List<String>> actualGrid = gridBuilder();
-        String actualBalance = actualGrid.get(Storage.Columns.BALANCE).get(0);
-        Assert.assertTrue("Баланс не соответствует добавленному: ".concat(sum).concat(" != ").concat(actualBalance), sum.equals(actualBalance));
+        BigDecimal actualBalance = new BigDecimal(actualGrid.get(Storage.Columns.BALANCE).get(0));
+        Assert.assertTrue("Баланс не соответствует добавленному: ".concat(sum.toString()).concat(" != ").concat(actualBalance.toString()),
+                sum.compareTo(actualBalance) == 0);
         String actualLastAction = actualGrid.get(Storage.Columns.LAST_ACTION).get(0);
         Assert.assertTrue("Последняя операция некорректна: ".concat(actualLastAction), Storage.Actions.REFILL.equals(actualLastAction));
+        String alertText = String.format(Storage.AlertText.SUCCESS_ACTION_ALERT, Storage.ActionsInfinitive.REFILL_FULL);
+        Assert.assertTrue("Нет алерта с текстом: ".concat(alertText), checkElementWithTextIsPresentBool(alertText));
+        BigDecimal leftToLimitPoint = Storage.Constants.LIMIT_MONEY.subtract(sum);
+        fillField(resources, leftToLimitPoint.toString());
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.TOO_MORE_MONEY_ALERT), checkElementWithTextIsPresentBool(Storage.AlertText.TOO_MORE_MONEY_ALERT));
+        actualBalance = new BigDecimal(gridBuilder().get(Storage.Columns.BALANCE).get(0));
+        Assert.assertTrue("Баланс превышает максимально допустимую сумму: ".concat(actualBalance.toString()), sum.compareTo(actualBalance) == 0);
+        fillField(resources, leftToLimitPoint.subtract(Storage.Constants.MIN_MONEY).toString());
+        successBtn.click();
+        actualBalance = new BigDecimal(gridBuilder().get(Storage.Columns.BALANCE).get(0));
+        Assert.assertTrue("Баланс не верен при максимальном граничном значении",
+                Storage.Constants.LIMIT_MONEY.subtract(Storage.Constants.MIN_MONEY).compareTo(actualBalance) == 0);
+        successBtn.click();
     }
 
     private void validateGrid(Map<String, List<String>> grid) {

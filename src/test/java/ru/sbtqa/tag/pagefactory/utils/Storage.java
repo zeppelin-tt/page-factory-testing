@@ -1,5 +1,7 @@
 package ru.sbtqa.tag.pagefactory.utils;
 
+import java.math.BigDecimal;
+
 public class Storage {
 
     public static class StashKeys {
@@ -27,8 +29,24 @@ public class Storage {
         public static final String BLOCK = "Блокировка";
     }
 
+    public static class ActionsInfinitive {
+        public static final String REFILL_FULL = "Пополнить счёт";
+        public static final String RELIEF_FULL = "Снять деньги";
+        public static final String CREATE_FULL = "Создать счёт";
+        public static final String CLOSE_FULL = "Закрыть счёт";
+        public static final String BLOCK_FULL = "Заблокировать счёт";
+        public static final String TRANSFER_TO = "Перечислить клиенту";
+    }
+
     public static class Constants {
         public static final String TIME_FORMAT = "yyyy.MM.dd HH:mm:ss";
+        public static final BigDecimal LIMIT_MONEY = new BigDecimal("10000000");
+        public static final BigDecimal MIN_MONEY = new BigDecimal("0.01");
+    }
+
+    public static class AlertText {
+        public static final String SUCCESS_ACTION_ALERT = "Операция %s выполнена успешно!";
+        public static final String TOO_MORE_MONEY_ALERT = "У вас больше 10 миллионов! Это слишком много!";
     }
 
 }
