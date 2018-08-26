@@ -14,12 +14,9 @@ import java.util.List;
 
 public class AnyPage extends Page {
 
-    /**
-     * Скроллит страницу, после чего элемент оказывается как можно ближе к центру. При возникновении любого исключения
-     * не происходит ничего.
-     *
-     * @param webElement
-     */
+    public static final int TIME_OUT = 10;
+
+
     public static void scrollToElement(WebElement webElement) {
         try {
             String getElementIntoViewPort = String.format(

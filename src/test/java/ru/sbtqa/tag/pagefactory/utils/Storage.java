@@ -47,6 +47,7 @@ public class Storage {
     public static class AlertText {
         public static final String SUCCESS_ACTION_ALERT = "Операция %s выполнена успешно!";
         public static final String TOO_MORE_MONEY_ALERT = "У вас больше 10 миллионов! Это слишком много!";
+        public static final String NOT_ENOUGH_MONEY_ALERT = "Баланс не может быть отрицательным!";
     }
 
 }
