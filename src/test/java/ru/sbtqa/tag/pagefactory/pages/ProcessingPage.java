@@ -182,7 +182,7 @@ public class ProcessingPage extends AnyPage {
                 .concat(" ").concat(Stash.getValue(FIRST_NAME))
                 .concat(" ").concat(Stash.getValue(SECOND_NAME));
         Map<String, List<String>> actualGrid = gridBuilder();
-        Map<String, String> addingRow = getLastRow(actualGrid);
+        Map<String, String> addingRow = getGridRow(actualGrid, 0);
         Assert.assertTrue("Поле ФИО некорректно добавилось: ".concat(initials).concat(" != ").concat(addingRow.get(Storage.Columns.INITIALS)),
                 addingRow.get(Storage.Columns.INITIALS).equals(initials));
         Assert.assertTrue("Предыдущее поле не находится на второй позиции: ".concat(actualGrid.get(Storage.Columns.INITIALS).get(1))
@@ -280,8 +280,125 @@ public class ProcessingPage extends AnyPage {
 
     @ActionTitle("проверяет перечисление денег другому клиенту")
     public void checkTransferTo() {
+        createAccount();
+        BigDecimal donorBalance = refillRndNumeric(getLastRow().get(Storage.Columns.ACC_NUM), 7, 2);
+        createAccount();
+        Map<String, String> donorAccRow = getGridRow(1);
+        Map<String, String> recipientAccRow = getGridRow(0);
         chooseAction(Storage.ActionsInfinitive.TRANSFER_TO);
+        fillField(accnum, donorAccRow.get(Storage.Columns.ACC_NUM));
+        fillField(secondAccnum, recipientAccRow.get(Storage.Columns.ACC_NUM));
+        BigDecimal transferMoney = getRndNumeric(6, 2);
+        fillField(resources, transferMoney.toString());
+        successBtn.click();
+        Map<String, List<String>> gridAfterChecking = gridBuilder();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Storage.Constants.TIME_FORMAT);
+        LocalDateTime firstLastActionTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.LAST_ACTION_TIME).get(0), formatter);
+        LocalDateTime secondLastActionTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.LAST_ACTION_TIME).get(1), formatter);
+        Assert.assertTrue("Время последней операции у донора и реципиента отличаетя: "
+                        .concat(firstLastActionTime.toString()).concat(" != ").concat(secondLastActionTime.toString()),
+                firstLastActionTime.equals(secondLastActionTime));
+        LocalDateTime creationTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.CREATE_TIME).get(1), formatter);
+        Assert.assertTrue("Время последней операции: (".concat(firstLastActionTime.toString())
+                        .concat("меньше или равно времени создания: (").concat(creationTime.toString()).concat(")"),
+                firstLastActionTime.isAfter(creationTime));
+        Assert.assertTrue("Последняя операция реципиента не равна: ".concat(Storage.Actions.REFILL),
+                Storage.Actions.REFILL.equals(gridAfterChecking.get(Storage.Columns.LAST_ACTION).get(0)));
+        Assert.assertTrue("Последняя операция донора не равна: ".concat(Storage.Actions.RELIEF),
+                Storage.Actions.RELIEF.equals(gridAfterChecking.get(Storage.Columns.LAST_ACTION).get(1)));
+        Assert.assertTrue("Средства не перечислены на счет реципиента или перечислина неверная сумма.",
+                transferMoney.compareTo(new BigDecimal(gridAfterChecking.get(Storage.Columns.BALANCE).get(0))) == 0);
+        Assert.assertTrue("Средства не сняты со счета донора или снята неверная сумма.",
+                donorBalance.subtract(transferMoney).compareTo(new BigDecimal(gridAfterChecking.get(Storage.Columns.BALANCE).get(1))) == 0);
     }
+
+    @ActionTitle("проверяет исключения в перечислении денег другому клиенту")
+    public void checkTransferExceptions() {
+        createAccount();
+        Map<String, String> activeAcc = getLastRow();
+        String activeAccNum = activeAcc.get(Storage.Columns.ACC_NUM);
+        BigDecimal activeBalance = refillRndNumeric(activeAccNum, 7, 2);
+        BigDecimal rndMoneyTransfer = getRndNumeric(4, 2);
+
+        createAccount();
+        String accNumToBlock = getLastRow().get(Storage.Columns.ACC_NUM);
+        blockAcc(accNumToBlock);
+        chooseAction(Storage.ActionsInfinitive.TRANSFER_TO);
+        fillField(accnum, accNumToBlock);
+        fillField(secondAccnum, activeAccNum);
+        fillField(resources, rndMoneyTransfer.toString());
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACCOUNT_IS_BLOCKED),
+                checkElementWithTextIsPresentBool(Storage.AlertText.ACCOUNT_IS_BLOCKED));
+        fillField(accnum, activeAccNum);
+        fillField(secondAccnum, accNumToBlock);
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.RECIPIENT_ACCOUNT_IS_BLOCKED),
+                checkElementWithTextIsPresentBool(Storage.AlertText.RECIPIENT_ACCOUNT_IS_BLOCKED));
+
+        createAccount();
+        String accNumToClose = getLastRow().get(Storage.Columns.ACC_NUM);
+        closeAcc(accNumToClose);
+        chooseAction(Storage.ActionsInfinitive.TRANSFER_TO);
+        fillField(accnum, accNumToClose);
+        fillField(secondAccnum, activeAccNum);
+        fillField(resources, rndMoneyTransfer.toString());
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACCOUNT_IS_CLOSED),
+                checkElementWithTextIsPresentBool(Storage.AlertText.ACCOUNT_IS_CLOSED));
+        fillField(accnum, activeAccNum);
+        fillField(secondAccnum, accNumToClose);
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.RECIPIENT_ACCOUNT_IS_CLOSED),
+                checkElementWithTextIsPresentBool(Storage.AlertText.RECIPIENT_ACCOUNT_IS_CLOSED));
+
+        String nonexistentAccNum = getRndNumeric(16).toString();
+        fillField(accnum, nonexistentAccNum);
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACCOUNT_NOT_EXIST),
+                checkElementWithTextIsPresentBool(Storage.AlertText.ACCOUNT_NOT_EXIST));
+        fillField(accnum, activeAccNum);
+        fillField(secondAccnum, nonexistentAccNum);
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.RECIPIENT_ACCOUNT_NOT_EXIST),
+                checkElementWithTextIsPresentBool(Storage.AlertText.RECIPIENT_ACCOUNT_NOT_EXIST));
+
+        createAccount();
+        Map<String, String> secondActiveAcc = getLastRow();
+        String secondActiveAccNum = secondActiveAcc.get(Storage.Columns.ACC_NUM);
+        chooseAction(Storage.ActionsInfinitive.TRANSFER_TO);
+        fillField(accnum, activeAccNum);
+        fillField(secondAccnum, secondActiveAccNum);
+        fillField(resources, Storage.Constants.STRING_ZERO);
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACTION_WITH_ZERO),
+                checkElementWithTextIsPresentBool(Storage.AlertText.ACTION_WITH_ZERO));
+
+        String shortAccNum = getRndNumeric(15).toString();
+        fillField(accnum, shortAccNum);
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.TOO_SHORT_ACC_NUM),
+                checkElementWithTextIsPresentBool(Storage.AlertText.TOO_SHORT_ACC_NUM));
+        fillField(accnum, activeAccNum);
+        fillField(secondAccnum, shortAccNum);
+        successBtn.click();
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.RECIPIENT_TOO_SHORT_ACC_NUM),
+                checkElementWithTextIsPresentBool(Storage.AlertText.RECIPIENT_TOO_SHORT_ACC_NUM));
+
+        openClosed.click();
+        BigDecimal actualActiveBalance = new BigDecimal(getRowByAccNum(activeAccNum).get(Storage.Columns.BALANCE));
+        Assert.assertTrue("Изменился баланс активного клиента с номером счёта (".concat(activeAccNum).concat(") : ")
+                        .concat(actualActiveBalance.toString()).concat(" != ").concat(activeBalance.toString()),
+                activeBalance.compareTo(actualActiveBalance) == 0);
+        Assert.assertTrue("Баланс должен быть равен нулю в данном закрытом счёте : ".concat(accNumToClose),
+                getRowByAccNum(accNumToClose).get(Storage.Columns.BALANCE).equals(Storage.Constants.STRING_ZERO));
+        Assert.assertTrue("Баланс должен быть равен нулю в данном заблокированном счёте : ".concat(accNumToBlock),
+                getRowByAccNum(accNumToBlock).get(Storage.Columns.BALANCE).equals(Storage.Constants.STRING_ZERO));
+        Assert.assertTrue("Баланс должен быть равен нулю в данном счёте : ".concat(secondActiveAccNum),
+                getRowByAccNum(secondActiveAccNum).get(Storage.Columns.BALANCE).equals(Storage.Constants.STRING_ZERO));
+        closeClosed.click();
+    }
+
 
     @ActionTitle("проверяет блокировку аккаунта")
     public void checkBlocking() {
@@ -380,11 +497,21 @@ public class ProcessingPage extends AnyPage {
     }
 
     private Map<String, String> getLastRow() {
-        return getLastRow(gridBuilder());
+        return getGridRow(gridBuilder(), 0);
     }
 
-    private Map<String, String> getLastRow(Map<String, List<String>> grid) {
-        return grid.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().get(0)));
+    private Map<String, String> getRowByAccNum(String accNum) {
+        Map<String, List<String>> grid = gridBuilder();
+        int numRow = grid.get(Storage.Columns.ACC_NUM).indexOf(accNum);
+        return getGridRow(grid, numRow);
+    }
+
+    private Map<String, String> getGridRow(int numRow) {
+        return getGridRow(gridBuilder(), numRow);
+    }
+
+    private Map<String, String> getGridRow(Map<String, List<String>> grid, int numRow) {
+        return grid.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().get(numRow)));
     }
 
     private Map<String, List<String>> gridBuilder() {

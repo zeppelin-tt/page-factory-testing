@@ -10,4 +10,8 @@ public class GenerateHelper {
         return new BigDecimal(new GenerateNumeric().generate(String.valueOf(precision - scale))
                 .concat(".").concat(new GenerateNumeric().generate(String.valueOf(scale))));
     }
+    public static BigDecimal getRndNumeric(int precision) {
+        return new BigDecimal(new GenerateNumeric().generate(String.valueOf(precision)));
+    }
+
 }

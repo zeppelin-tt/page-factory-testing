@@ -40,14 +40,25 @@ public class Storage {
 
     public static class Constants {
         public static final String TIME_FORMAT = "yyyy.MM.dd HH:mm:ss";
+        public static final String STRING_ZERO = "0.00";
         public static final BigDecimal LIMIT_MONEY = new BigDecimal("10000000");
         public static final BigDecimal MIN_MONEY = new BigDecimal("0.01");
     }
 
     public static class AlertText {
         public static final String SUCCESS_ACTION_ALERT = "Операция %s выполнена успешно!";
-        public static final String TOO_MORE_MONEY_ALERT = "У вас больше 10 миллионов! Это слишком много!";
+        public static final String TOO_MORE_MONEY_ALERT = "Результатом операции не может быть сумма, превышающая 10 миллионов!";
         public static final String NOT_ENOUGH_MONEY_ALERT = "Баланс не может быть отрицательным!";
+        public static final String ACCOUNT_IS_BLOCKED = "Счёт клиента заблокирован";
+        public static final String RECIPIENT_ACCOUNT_IS_BLOCKED = "Счёт получателя заблокирован";
+        public static final String ACCOUNT_IS_CLOSED = "Счёт клиента закрыт";
+        public static final String RECIPIENT_ACCOUNT_IS_CLOSED = "Счёт получателя закрыт";
+        public static final String ACCOUNT_NOT_EXIST = "Счёта клиента с этим номером не существует";
+        public static final String RECIPIENT_ACCOUNT_NOT_EXIST = "Счёта получателя с этим номером не существует";
+        public static final String ACTION_WITH_ZERO = "Вы не можете выполнить операцию с нулевой суммой!";
+        public static final String TOO_SHORT_ACC_NUM = "Счет клиента слишком короткий. Должен быть 16 символов.";
+        public static final String RECIPIENT_TOO_SHORT_ACC_NUM = "Счет получателя слишком короткий. Должен быть 16 символов.";
+
     }
 
 }
