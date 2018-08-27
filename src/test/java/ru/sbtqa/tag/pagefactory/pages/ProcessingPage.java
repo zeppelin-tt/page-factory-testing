@@ -1,6 +1,7 @@
 package ru.sbtqa.tag.pagefactory.pages;
 
 import org.junit.Assert;
+import org.openqa.selenium.By;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
@@ -147,13 +148,9 @@ public class ProcessingPage extends AnyPage {
         Stash.put(FIRST_NAME, firstNameStr);
         Stash.put(SECOND_NAME, secondNameStr);
         successBtn.click();
-        LOG.info("Создан пользователь: ".concat(lastNameStr).concat(" ").concat(firstNameStr).concat(" ").concat(secondNameStr));
-    }
-
-    @ActionTitle("получает грид")
-    public void click() {
-        Map<String, List<String>> mapGrid = gridBuilder();
-        LOG.info(String.valueOf(mapGrid));
+        String initials = lastNameStr.concat(" ").concat(firstNameStr).concat(" ").concat(secondNameStr);
+        new WebDriverWait(PageFactory.getWebDriver(), TIME_OUT).until(ExpectedConditions.textToBePresentInElement(table, initials));
+        LOG.info("Создан аккаунт для пользователя: ".concat(initials));
     }
 
     @ActionTitle("проверяет значение типа операции")
@@ -244,6 +241,7 @@ public class ProcessingPage extends AnyPage {
         Assert.assertTrue("Баланс не верен при максимальном граничном значении",
                 Storage.Constants.LIMIT_MONEY.subtract(Storage.Constants.MIN_MONEY).compareTo(actualBalance) == 0);
         Stash.put(ADDING_ROW, getLastRow());
+        LOG.info("Пополнение счёта корректно.");
     }
 
     @ActionTitle("проверяет Снятие денег со счёта")
@@ -275,6 +273,7 @@ public class ProcessingPage extends AnyPage {
         actualBalance = new BigDecimal(getLastRow().get(Storage.Columns.BALANCE));
         Assert.assertTrue("Баланс изменился при перехождении порога нуля: ".concat(actualBalance.toString()), actualBalance.compareTo(BigDecimal.ZERO) == 0);
         Stash.put(ADDING_ROW, getLastRow());
+        LOG.info("Снятие денег со счёта корректно.");
     }
 
 
@@ -310,6 +309,7 @@ public class ProcessingPage extends AnyPage {
                 transferMoney.compareTo(new BigDecimal(gridAfterChecking.get(Storage.Columns.BALANCE).get(0))) == 0);
         Assert.assertTrue("Средства не сняты со счета донора или снята неверная сумма.",
                 donorBalance.subtract(transferMoney).compareTo(new BigDecimal(gridAfterChecking.get(Storage.Columns.BALANCE).get(1))) == 0);
+        LOG.info("Перечисление денег другому клиенту корректно.");
     }
 
     @ActionTitle("проверяет исключения в перечислении денег другому клиенту")
@@ -397,6 +397,7 @@ public class ProcessingPage extends AnyPage {
         Assert.assertTrue("Баланс должен быть равен нулю в данном счёте : ".concat(secondActiveAccNum),
                 getRowByAccNum(secondActiveAccNum).get(Storage.Columns.BALANCE).equals(Storage.Constants.STRING_ZERO));
         closeClosed.click();
+        LOG.info("Все исключения воспроизводятся корректно.");
     }
 
 
@@ -423,6 +424,7 @@ public class ProcessingPage extends AnyPage {
         Assert.assertTrue("Некорректная последняя операция: ".concat(lastAction),
                 lastAction.equals(Storage.Actions.BLOCK));
         closeClosed.click();
+        LOG.info("Блокировка аккаунта корректна.");
     }
 
     @ActionTitle("проверяет закрытие аккаунта")
@@ -447,6 +449,42 @@ public class ProcessingPage extends AnyPage {
         Assert.assertTrue("Некорректная последняя операция: ".concat(lastAction),
                 lastAction.equals(Storage.Actions.CLOSE));
         closeClosed.click();
+        LOG.info("Закрытие аккаунта корректно.");
+    }
+
+    @ActionTitle("проверяет пагинацию")
+    public void checkPagination() {
+        Map<String, List<String>> grid = gridBuilder();
+        List<String> numList = grid.get(Storage.Columns.ACC_NUM);
+        String extremeAccNum = numList.get(numList.size()-1);
+        createAccount();
+        List<String> numListAfter = gridBuilder().get(Storage.Columns.ACC_NUM);
+        Assert.assertFalse("После добавления нового аккаунта, последний акааунт со страницы не пропал.",
+                numListAfter.contains(extremeAccNum));
+        nextBtn.click();
+        Assert.assertTrue("На второй странице нет аккаунта: ".concat(extremeAccNum),
+                extremeAccNum.equals(gridBuilder().get(Storage.Columns.ACC_NUM).get(0)));
+        prevBtn.click();
+        String lastCreatedInitials = ((String) Stash.getValue(LAST_NAME)).concat(" ")
+                .concat(Stash.getValue(FIRST_NAME)).concat(" ").concat(Stash.getValue(SECOND_NAME));
+        String topInitials = gridBuilder().get(Storage.Columns.INITIALS).get(0);
+        Assert.assertTrue("Возврат на первую страницу через (Prev) некорректен: ".concat(topInitials).concat(" != ").concat(lastCreatedInitials),
+                lastCreatedInitials.equals(topInitials));
+        nextBtn.click();
+        PageFactory.getWebDriver().navigate().refresh();
+        Assert.assertTrue("Возврат на первую страницу через (refresh) некорректен.",
+                lastCreatedInitials.equals(gridBuilder().get(Storage.Columns.INITIALS).get(0)));
+        LOG.info("Пагинация корректна.");
+    }
+
+    @ActionTitle("проверяет закрытие таблицы")
+    public void checkClosingTable() {
+        closeTable.click();
+        Assert.assertTrue("Таблица не закрылась.",
+                PageFactory.getWebDriver().findElements(By.xpath("//table[@class='table table-bordered']")).size() == 0);
+        openTable.click();
+        Assert.assertTrue("Таблица не открылась.", table.isDisplayed());
+        LOG.info("Таблица закрывается и открывается корректно.");
     }
 
     private BigDecimal refillRndNumeric(String acc, int precision, int scale) {
@@ -462,12 +500,14 @@ public class ProcessingPage extends AnyPage {
         chooseAction(Storage.ActionsInfinitive.BLOCK_FULL);
         fillField(accnum, acc);
         successBtn.click();
+        LOG.info("Аккаунт заблокирован: ".concat(acc));
     }
 
     private void closeAcc(String acc) {
         chooseAction(Storage.ActionsInfinitive.CLOSE_FULL);
         fillField(accnum, acc);
         successBtn.click();
+        LOG.info("Аккаунт закрыт: ".concat(acc));
     }
 
     private void validateGrid(Map<String, List<String>> grid) {
@@ -494,6 +534,7 @@ public class ProcessingPage extends AnyPage {
                 it.getAndIncrement();
             });
         });
+        LOG.info("Поля таблицы корректны.");
     }
 
     private Map<String, String> getLastRow() {
