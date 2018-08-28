@@ -296,7 +296,7 @@ public class ProcessingPage extends AnyPage {
         LocalDateTime firstLastActionTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.LAST_ACTION_TIME).get(0), formatter);
         LocalDateTime secondLastActionTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.LAST_ACTION_TIME).get(1), formatter);
         Assert.assertTrue("Время последней операции у донора (".concat(donorAccRow.get(Storage.Columns.ACC_NUM))
-                        .concat(") и реципиента ").concat(recipientAccRow.get(Storage.Columns.ACC_NUM)).concat("отличаетя: ")
+                        .concat(") и реципиента (").concat(recipientAccRow.get(Storage.Columns.ACC_NUM)).concat(") отличаетя: ")
                         .concat(firstLastActionTime.toString()).concat(" != ").concat(secondLastActionTime.toString()),
                 firstLastActionTime.equals(secondLastActionTime));
         LocalDateTime creationTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.CREATE_TIME).get(1), formatter);
@@ -509,6 +509,7 @@ public class ProcessingPage extends AnyPage {
         clearAndFill(resources, rndNumeric.toString());
         successBtn.click();
         driverWait.until(ExpectedConditions.textToBePresentInElement(table, rndNumeric.toString()));
+        LOG.info("Счёт (".concat(acc).concat(") пополнен на сумму: ").concat(rndNumeric.toString()));
         return rndNumeric;
     }
 
@@ -520,6 +521,7 @@ public class ProcessingPage extends AnyPage {
         chooseAction(Storage.ActionsInfinitive.BLOCK_FULL);
         clearAndFill(accnum, acc);
         successBtn.click();
+        DriverExtension.checkElementWithTextIsPresent(String.format(Storage.AlertText.SUCCESS_ACTION_ALERT, Storage.ActionsInfinitive.BLOCK_FULL), TIME_OUT);
         LOG.info("Аккаунт заблокирован: ".concat(acc));
     }
 
@@ -531,6 +533,7 @@ public class ProcessingPage extends AnyPage {
         chooseAction(Storage.ActionsInfinitive.CLOSE_FULL);
         clearAndFill(accnum, acc);
         successBtn.click();
+        DriverExtension.checkElementWithTextIsPresent(String.format(Storage.AlertText.SUCCESS_ACTION_ALERT, Storage.ActionsInfinitive.CLOSE_FULL), TIME_OUT);
         LOG.info("Аккаунт закрыт: ".concat(acc));
     }
 
