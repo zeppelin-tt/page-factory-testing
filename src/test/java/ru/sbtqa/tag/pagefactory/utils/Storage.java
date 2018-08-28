@@ -58,7 +58,6 @@ public class Storage {
         public static final String ACTION_WITH_ZERO = "Вы не можете выполнить операцию с нулевой суммой!";
         public static final String TOO_SHORT_ACC_NUM = "Счет клиента слишком короткий. Должен быть 16 символов.";
         public static final String RECIPIENT_TOO_SHORT_ACC_NUM = "Счет получателя слишком короткий. Должен быть 16 символов.";
-
     }
 
 }

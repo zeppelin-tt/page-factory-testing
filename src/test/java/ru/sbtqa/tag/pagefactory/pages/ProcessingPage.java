@@ -141,15 +141,15 @@ public class ProcessingPage extends AnyPage {
         String lastNameStr = new GenerateSurname().generate();
         String firstNameStr = new GenerateName().generate();
         String secondNameStr = new GenerateSecondname().generate();
-        fillField(lastname, lastNameStr);
-        fillField(firstname, firstNameStr);
-        fillField(secondname, secondNameStr);
+        clearAndFill(lastname, lastNameStr);
+        clearAndFill(firstname, firstNameStr);
+        clearAndFill(secondname, secondNameStr);
         Stash.put(LAST_NAME, lastNameStr);
         Stash.put(FIRST_NAME, firstNameStr);
         Stash.put(SECOND_NAME, secondNameStr);
         successBtn.click();
         String initials = lastNameStr.concat(" ").concat(firstNameStr).concat(" ").concat(secondNameStr);
-        new WebDriverWait(PageFactory.getWebDriver(), TIME_OUT).until(ExpectedConditions.textToBePresentInElement(table, initials));
+        driverWait.until(ExpectedConditions.textToBePresentInElement(table, initials));
         LOG.info("Создан аккаунт для пользователя: ".concat(initials));
     }
 
@@ -229,17 +229,18 @@ public class ProcessingPage extends AnyPage {
         String alertText = String.format(Storage.AlertText.SUCCESS_ACTION_ALERT, Storage.ActionsInfinitive.REFILL_FULL);
         Assert.assertTrue("Нет алерта с текстом: ".concat(alertText), checkElementWithTextIsPresentBool(alertText));
         BigDecimal leftToLimitPoint = Storage.Constants.LIMIT_MONEY.subtract(sum);
-        fillField(resources, leftToLimitPoint.toString());
+        clearAndFill(resources, leftToLimitPoint.toString());
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.TOO_MORE_MONEY_ALERT),
                 checkElementWithTextIsPresentBool(Storage.AlertText.TOO_MORE_MONEY_ALERT));
         actualBalance = new BigDecimal(getLastRow().get(Storage.Columns.BALANCE));
         Assert.assertTrue("Баланс превышает максимально допустимую сумму: ".concat(actualBalance.toString()), sum.compareTo(actualBalance) == 0);
-        fillField(resources, leftToLimitPoint.subtract(Storage.Constants.MIN_MONEY).toString());
+        clearAndFill(resources, leftToLimitPoint.subtract(Storage.Constants.MIN_MONEY).toString());
         successBtn.click();
         actualBalance = new BigDecimal(getLastRow().get(Storage.Columns.BALANCE));
-        Assert.assertTrue("Баланс не верен при максимальном граничном значении",
-                Storage.Constants.LIMIT_MONEY.subtract(Storage.Constants.MIN_MONEY).compareTo(actualBalance) == 0);
+        BigDecimal maxBalance = Storage.Constants.LIMIT_MONEY.subtract(Storage.Constants.MIN_MONEY);
+        Assert.assertTrue("Баланс не верен при максимальном граничном значении: ".concat(maxBalance.toString()).concat(" != ").concat(actualBalance.toString()),
+                maxBalance.compareTo(actualBalance) == 0);
         Stash.put(ADDING_ROW, getLastRow());
         LOG.info("Пополнение счёта корректно.");
     }
@@ -250,8 +251,8 @@ public class ProcessingPage extends AnyPage {
         Map<String, String> rowMap = Stash.getValue(ADDING_ROW);
         BigDecimal originalBalance = new BigDecimal(rowMap.get(Storage.Columns.BALANCE));
         BigDecimal withdrawalMoney = getRndNumeric(5, 2);
-        fillField(accnum, rowMap.get(Storage.Columns.ACC_NUM));
-        fillField(resources, withdrawalMoney.toString());
+        clearAndFill(accnum, rowMap.get(Storage.Columns.ACC_NUM));
+        clearAndFill(resources, withdrawalMoney.toString());
         successBtn.click();
         Map<String, String> actualRow = getLastRow();
         BigDecimal actualBalance = new BigDecimal(actualRow.get(Storage.Columns.BALANCE));
@@ -262,11 +263,11 @@ public class ProcessingPage extends AnyPage {
         Assert.assertTrue("Последняя операция некорректна: ".concat(actualLastAction), Storage.Actions.RELIEF.equals(actualLastAction));
         String alertText = String.format(Storage.AlertText.SUCCESS_ACTION_ALERT, Storage.ActionsInfinitive.RELIEF_FULL);
         Assert.assertTrue("Нет алерта с текстом: ".concat(alertText), checkElementWithTextIsPresentBool(alertText));
-        fillField(resources, actualBalance.toString());
+        clearAndFill(resources, actualBalance.toString());
         successBtn.click();
         actualBalance = new BigDecimal(getLastRow().get(Storage.Columns.BALANCE));
         Assert.assertTrue("Некорректное снятие до нуля: ".concat(actualBalance.toString()), actualBalance.compareTo(BigDecimal.ZERO) == 0);
-        fillField(resources, Storage.Constants.MIN_MONEY.toString());
+        clearAndFill(resources, Storage.Constants.MIN_MONEY.toString());
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.NOT_ENOUGH_MONEY_ALERT),
                 checkElementWithTextIsPresentBool(Storage.AlertText.NOT_ENOUGH_MONEY_ALERT));
@@ -285,16 +286,17 @@ public class ProcessingPage extends AnyPage {
         Map<String, String> donorAccRow = getGridRow(1);
         Map<String, String> recipientAccRow = getGridRow(0);
         chooseAction(Storage.ActionsInfinitive.TRANSFER_TO);
-        fillField(accnum, donorAccRow.get(Storage.Columns.ACC_NUM));
-        fillField(secondAccnum, recipientAccRow.get(Storage.Columns.ACC_NUM));
+        clearAndFill(accnum, donorAccRow.get(Storage.Columns.ACC_NUM));
+        clearAndFill(secondAccnum, recipientAccRow.get(Storage.Columns.ACC_NUM));
         BigDecimal transferMoney = getRndNumeric(6, 2);
-        fillField(resources, transferMoney.toString());
+        clearAndFill(resources, transferMoney.toString());
         successBtn.click();
         Map<String, List<String>> gridAfterChecking = gridBuilder();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Storage.Constants.TIME_FORMAT);
         LocalDateTime firstLastActionTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.LAST_ACTION_TIME).get(0), formatter);
         LocalDateTime secondLastActionTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.LAST_ACTION_TIME).get(1), formatter);
-        Assert.assertTrue("Время последней операции у донора и реципиента отличаетя: "
+        Assert.assertTrue("Время последней операции у донора (".concat(donorAccRow.get(Storage.Columns.ACC_NUM))
+                        .concat(") и реципиента ").concat(recipientAccRow.get(Storage.Columns.ACC_NUM)).concat("отличаетя: ")
                         .concat(firstLastActionTime.toString()).concat(" != ").concat(secondLastActionTime.toString()),
                 firstLastActionTime.equals(secondLastActionTime));
         LocalDateTime creationTime = LocalDateTime.parse(gridAfterChecking.get(Storage.Columns.CREATE_TIME).get(1), formatter);
@@ -324,14 +326,14 @@ public class ProcessingPage extends AnyPage {
         String accNumToBlock = getLastRow().get(Storage.Columns.ACC_NUM);
         blockAcc(accNumToBlock);
         chooseAction(Storage.ActionsInfinitive.TRANSFER_TO);
-        fillField(accnum, accNumToBlock);
-        fillField(secondAccnum, activeAccNum);
-        fillField(resources, rndMoneyTransfer.toString());
+        clearAndFill(accnum, accNumToBlock);
+        clearAndFill(secondAccnum, activeAccNum);
+        clearAndFill(resources, rndMoneyTransfer.toString());
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACCOUNT_IS_BLOCKED),
                 checkElementWithTextIsPresentBool(Storage.AlertText.ACCOUNT_IS_BLOCKED));
-        fillField(accnum, activeAccNum);
-        fillField(secondAccnum, accNumToBlock);
+        clearAndFill(accnum, activeAccNum);
+        clearAndFill(secondAccnum, accNumToBlock);
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.RECIPIENT_ACCOUNT_IS_BLOCKED),
                 checkElementWithTextIsPresentBool(Storage.AlertText.RECIPIENT_ACCOUNT_IS_BLOCKED));
@@ -340,25 +342,33 @@ public class ProcessingPage extends AnyPage {
         String accNumToClose = getLastRow().get(Storage.Columns.ACC_NUM);
         closeAcc(accNumToClose);
         chooseAction(Storage.ActionsInfinitive.TRANSFER_TO);
-        fillField(accnum, accNumToClose);
-        fillField(secondAccnum, activeAccNum);
-        fillField(resources, rndMoneyTransfer.toString());
+        clearAndFill(accnum, accNumToClose);
+        clearAndFill(secondAccnum, activeAccNum);
+        clearAndFill(resources, rndMoneyTransfer.toString());
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACCOUNT_IS_CLOSED),
                 checkElementWithTextIsPresentBool(Storage.AlertText.ACCOUNT_IS_CLOSED));
-        fillField(accnum, activeAccNum);
-        fillField(secondAccnum, accNumToClose);
+        clearAndFill(accnum, activeAccNum);
+        clearAndFill(secondAccnum, accNumToClose);
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.RECIPIENT_ACCOUNT_IS_CLOSED),
                 checkElementWithTextIsPresentBool(Storage.AlertText.RECIPIENT_ACCOUNT_IS_CLOSED));
 
-        String nonexistentAccNum = getRndNumeric(16).toString();
-        fillField(accnum, nonexistentAccNum);
-        successBtn.click();
-        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACCOUNT_NOT_EXIST),
-                checkElementWithTextIsPresentBool(Storage.AlertText.ACCOUNT_NOT_EXIST));
-        fillField(accnum, activeAccNum);
-        fillField(secondAccnum, nonexistentAccNum);
+        String nonexistentAccNum = "";
+        boolean alertDetected = false;
+        for (int i = 0; i < 5; i++) {
+            nonexistentAccNum = getRndNumeric(16).toString();
+            clearAndFill(accnum, nonexistentAccNum);
+            successBtn.click();
+            if (checkElementWithTextIsPresentBool(Storage.AlertText.ACCOUNT_NOT_EXIST)) {
+                alertDetected = true;
+                break;
+            }
+        }
+        Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACCOUNT_NOT_EXIST), alertDetected);
+
+        clearAndFill(accnum, activeAccNum);
+        clearAndFill(secondAccnum, nonexistentAccNum);
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.RECIPIENT_ACCOUNT_NOT_EXIST),
                 checkElementWithTextIsPresentBool(Storage.AlertText.RECIPIENT_ACCOUNT_NOT_EXIST));
@@ -367,20 +377,20 @@ public class ProcessingPage extends AnyPage {
         Map<String, String> secondActiveAcc = getLastRow();
         String secondActiveAccNum = secondActiveAcc.get(Storage.Columns.ACC_NUM);
         chooseAction(Storage.ActionsInfinitive.TRANSFER_TO);
-        fillField(accnum, activeAccNum);
-        fillField(secondAccnum, secondActiveAccNum);
-        fillField(resources, Storage.Constants.STRING_ZERO);
+        clearAndFill(accnum, activeAccNum);
+        clearAndFill(secondAccnum, secondActiveAccNum);
+        clearAndFill(resources, Storage.Constants.STRING_ZERO);
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.ACTION_WITH_ZERO),
                 checkElementWithTextIsPresentBool(Storage.AlertText.ACTION_WITH_ZERO));
 
         String shortAccNum = getRndNumeric(15).toString();
-        fillField(accnum, shortAccNum);
+        clearAndFill(accnum, shortAccNum);
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.TOO_SHORT_ACC_NUM),
                 checkElementWithTextIsPresentBool(Storage.AlertText.TOO_SHORT_ACC_NUM));
-        fillField(accnum, activeAccNum);
-        fillField(secondAccnum, shortAccNum);
+        clearAndFill(accnum, activeAccNum);
+        clearAndFill(secondAccnum, shortAccNum);
         successBtn.click();
         Assert.assertTrue("Нет алерта с текстом: ".concat(Storage.AlertText.RECIPIENT_TOO_SHORT_ACC_NUM),
                 checkElementWithTextIsPresentBool(Storage.AlertText.RECIPIENT_TOO_SHORT_ACC_NUM));
@@ -407,8 +417,7 @@ public class ProcessingPage extends AnyPage {
         String accNum = getLastRow().get(Storage.Columns.ACC_NUM);
         BigDecimal balance = refillRndNumeric(accNum, 6, 2);
         blockAcc(accNum);
-        new WebDriverWait(PageFactory.getWebDriver(), TIME_OUT)
-                .until(ExpectedConditions.not(ExpectedConditions.textToBePresentInElement(table, accNum)));
+        driverWait.until(ExpectedConditions.not(ExpectedConditions.textToBePresentInElement(table, accNum)));
         String alertText = String.format(Storage.AlertText.SUCCESS_ACTION_ALERT, Storage.ActionsInfinitive.BLOCK_FULL);
         Assert.assertTrue("Нет алерта с текстом: ".concat(alertText), checkElementWithTextIsPresentBool(alertText));
         Assert.assertFalse("После блокировки счет не пропал из таблицы: ".concat(accNum),
@@ -433,8 +442,7 @@ public class ProcessingPage extends AnyPage {
         String accNum = getLastRow().get(Storage.Columns.ACC_NUM);
         refillRndNumeric(accNum, 6, 2);
         closeAcc(accNum);
-        new WebDriverWait(PageFactory.getWebDriver(), TIME_OUT)
-                .until(ExpectedConditions.not(ExpectedConditions.textToBePresentInElement(table, accNum)));
+        driverWait.until(ExpectedConditions.not(ExpectedConditions.textToBePresentInElement(table, accNum)));
         String alertText = String.format(Storage.AlertText.SUCCESS_ACTION_ALERT, Storage.ActionsInfinitive.CLOSE_FULL);
         Assert.assertTrue("Нет алерта с текстом: ".concat(alertText), checkElementWithTextIsPresentBool(alertText));
         Assert.assertFalse("После закрытия счет не пропал из таблицы: ".concat(accNum),
@@ -487,29 +495,51 @@ public class ProcessingPage extends AnyPage {
         LOG.info("Таблица закрывается и открывается корректно.");
     }
 
+    /**
+     * пополнение счёта на случайную сумму с заданной точностью и масштабом
+     * @param acc номер аккаунта
+     * @param precision точность
+     * @param scale масштаб
+     * @return сумма пополнения
+     */
     private BigDecimal refillRndNumeric(String acc, int precision, int scale) {
         select(selectActionType, Storage.ActionsInfinitive.REFILL_FULL);
         BigDecimal rndNumeric = getRndNumeric(precision, scale);
-        fillField(accnum, acc);
-        fillField(resources, rndNumeric.toString());
+        clearAndFill(accnum, acc);
+        clearAndFill(resources, rndNumeric.toString());
         successBtn.click();
+        driverWait.until(ExpectedConditions.textToBePresentInElement(table, rndNumeric.toString()));
         return rndNumeric;
     }
 
+    /**
+     * блокировка аккаунта
+     * @param acc номер аккаунта
+     */
     private void blockAcc(String acc) {
         chooseAction(Storage.ActionsInfinitive.BLOCK_FULL);
-        fillField(accnum, acc);
+        clearAndFill(accnum, acc);
         successBtn.click();
         LOG.info("Аккаунт заблокирован: ".concat(acc));
     }
 
+    /**
+     * закрытие аккаунта
+     * @param acc номер аккаунта
+     */
     private void closeAcc(String acc) {
         chooseAction(Storage.ActionsInfinitive.CLOSE_FULL);
-        fillField(accnum, acc);
+        clearAndFill(accnum, acc);
         successBtn.click();
         LOG.info("Аккаунт закрыт: ".concat(acc));
     }
 
+    /**
+     * валидация по регклярным выражениям
+     * проверка даты (последняя операция) after (дата создания)
+     * если (последняя операция) == "Создание", то (последняя операция) и (дата создания) равны
+     * @param grid страница таблицы
+     */
     private void validateGrid(Map<String, List<String>> grid) {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(Storage.Constants.TIME_FORMAT);
         grid.forEach((key, value) -> {
@@ -537,24 +567,43 @@ public class ProcessingPage extends AnyPage {
         LOG.info("Поля таблицы корректны.");
     }
 
+    /**
+     * @return верхняя строка соответвтует 1 аккаунту (с последней операцией) из актуальной страницы таблицы
+     */
     private Map<String, String> getLastRow() {
         return getGridRow(gridBuilder(), 0);
     }
 
+    /**
+     * @param accNum номер аккаунта (len 16)
+     * @return строка соответвтует 1 аккаунту
+     */
     private Map<String, String> getRowByAccNum(String accNum) {
         Map<String, List<String>> grid = gridBuilder();
         int numRow = grid.get(Storage.Columns.ACC_NUM).indexOf(accNum);
         return getGridRow(grid, numRow);
     }
 
+    /**
+     * @param numRow номер строки таблицы (0+)
+     * @return строка соответвтует 1 аккаунту из актуальной страницы таблицы
+     */
     private Map<String, String> getGridRow(int numRow) {
         return getGridRow(gridBuilder(), numRow);
     }
 
+    /**
+     * @param grid страница таблицы
+     * @param numRow номер строки таблицы (0+)
+     * @return строка соответвтует 1 аккаунту
+     */
     private Map<String, String> getGridRow(Map<String, List<String>> grid, int numRow) {
         return grid.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, v -> v.getValue().get(numRow)));
     }
 
+    /**
+     * @return актуальная страница таблицы
+     */
     private Map<String, List<String>> gridBuilder() {
         DriverExtension.waitUntilElementPresent(table, TIME_OUT);
         List<String> listColumnNames = getElementsByXPath("//table[@class='table table-bordered']/thead/tr/th")
